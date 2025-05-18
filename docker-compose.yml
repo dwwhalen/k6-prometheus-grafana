@@ -1,54 +1,58 @@
 services:
+  # Sample API service to be load tested by k6
   sample-api:
     build: ./sample-api
     ports:
-      - "3000:3000"
+      - "3000:3000" # Exposes API on localhost:3000
     networks:
       - k6-net
 
+  # Prometheus for metrics collection
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
     ports:
-      - "9090:9090"
+      - "9090:9090" # Prometheus UI available at localhost:9090
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml # Custom config
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
-      - '--web.enable-lifecycle'
-      - '--web.enable-remote-write-receiver'
+      - '--web.enable-lifecycle' # Allows config reloads without restart
+      - '--web.enable-remote-write-receiver' # Enables remote write endpoint for k6
     networks:
       - k6-net
 
+  # Grafana for dashboarding and visualization
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
-      - "3001:3000"
+      - "3001:3000" # Grafana UI available at localhost:3001
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin # Default admin password
     volumes:
-      - grafana-storage:/var/lib/grafana
-      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - grafana-storage:/var/lib/grafana # Persistent storage for Grafana data
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards # Pre-provisioned dashboards
     networks:
       - k6-net
     depends_on:
-      - prometheus
+      - prometheus # Waits for Prometheus to be ready
 
+  # k6 load testing tool with Prometheus remote write output
   k6:
     image: grafana/k6:latest
     container_name: k6
     ports:
       - "6565:6565"
     environment:
-      - K6_PROMETHEUS_RW_SERVER_URL=http://prometheus:9090/api/v1/write
-      - K6_PROMETHEUS_RW_TREND_STATS=p(95),p(99),min,max
+      - K6_PROMETHEUS_RW_SERVER_URL=http://prometheus:9090/api/v1/write # Prometheus remote write endpoint
+      - K6_PROMETHEUS_RW_TREND_STATS=p(95),p(99),min,max # Custom trend stats
     volumes:
-      - ./k6:/scripts
-    command: run --out experimental-prometheus-rw /scripts/script.js
+      - ./k6:/scripts # Mounts local k6 scripts
+    # command: run --out experimental-prometheus-rw /scripts/script.js # Runs the main k6 script
     networks:
       - k6-net
     depends_on:
@@ -56,8 +60,8 @@ services:
       - prometheus
 
 volumes:
-  grafana-storage:
+  grafana-storage: # Named volume for Grafana data
 
 networks:
   k6-net:
-    driver: bridge
+    driver: bridge # Isolated network for all services

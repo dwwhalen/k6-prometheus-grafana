@@ -1,16 +1,12 @@
 global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
-
+  scrape_interval: 15s      # How frequently to scrape targets by default
+  evaluation_interval: 15s  # How frequently to evaluate rules
 scrape_configs:
-  - job_name: 'prometheus'
+  - job_name: 'prometheus'  # Self-monitoring configuration
     static_configs:
-      - targets: ['localhost:9090']
-
-  - job_name: 'k6'
+      - targets: ['localhost:9090']  # Prometheus's own metrics endpoint
+  - job_name: 'k6'          # Configuration to scrape k6 metrics
     static_configs:
-      - targets: ['k6:6565']
-    scrape_interval: 5s
-    metrics_path: /metrics
-
-  
+      - targets: ['k6:6565']  # k6's metrics endpoint (using Docker service name)
+    scrape_interval: 5s     # More frequent scraping for k6 during tests
+    metrics_path: /metrics  # Path where metrics are exposed
